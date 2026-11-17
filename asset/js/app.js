@@ -412,7 +412,7 @@ function checkLiveUpdates() {
                 apiToken = data.token;
             }
             if (data && data.changed === true) {
-                if (totalSlides === 0) {
+                if (totalSlides <= 1 || isAutoSlidePaused) {
                     applyLiveUpdate(data);
                 } else {
                     pendingSlideUpdate = data;
