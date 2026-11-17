@@ -63,12 +63,22 @@ function set_setting(string $key, $value): bool
 function get_all_settings(): array
 {
     $db = get_db();
-    $rows = $db->query("SELECT key, value FROM settings")->fetchAll();
+    $rows = $db->query("SELECT key, value FROM settings WHERE key != 'admin_password_hash'")->fetchAll();
     $settings = [];
     foreach ($rows as $row) {
         $settings[$row['key']] = $row['value'];
     }
     return $settings;
+}
+
+function get_admin_password_hash(): string
+{
+    $hash = (string) get_setting('admin_password_hash', '');
+    if ($hash === '') {
+        $hash = password_hash('kiosign123', PASSWORD_DEFAULT);
+        set_setting('admin_password_hash', $hash);
+    }
+    return $hash;
 }
 
 function get_bgm_playlist(): array
@@ -222,8 +232,8 @@ function reset_to_seed(): void
 function get_version_hash(): string
 {
     $db = get_db();
-    $slides = $db->query("SELECT id, tag, title, subtitle, badge, specs, image, accent, type, iframe_url, action_label, button_label, sort_order, is_active FROM slides ORDER BY id ASC")->fetchAll();
-    $settings = $db->query("SELECT key, value FROM settings ORDER BY key ASC")->fetchAll();
+    $slides = $db->query("SELECT id, tag, title, subtitle, badge, specs, image, video_url, accent, type, iframe_url, action_label, button_label, sort_order, is_active FROM slides ORDER BY id ASC")->fetchAll();
+    $settings = $db->query("SELECT key, value FROM settings WHERE key != 'admin_password_hash' ORDER BY key ASC")->fetchAll();
     return md5(json_encode([$slides, $settings]));
 }
 

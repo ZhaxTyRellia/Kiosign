@@ -50,7 +50,8 @@ function seed_database(PDO $pdo, bool $forceReset = false): void
             'default_device_id' => 'SIGN-01',
             'seq_image' => '0',
             'seq_audio' => '0',
-            'seq_video' => '0'
+            'seq_video' => '0',
+            'admin_password_hash' => password_hash('kiosign123', PASSWORD_DEFAULT)
         ];
         foreach ($defaultSettings as $key => $val) {
             $stmt->execute([':key' => $key, ':value' => (string) $val]);

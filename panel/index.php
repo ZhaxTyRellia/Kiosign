@@ -3,6 +3,97 @@ require_once __DIR__ . '/../db/db.php';
 ks_guard_request('panel', 35, 10, 30);
 ks_init_session();
 
+$isAuthenticated = ks_is_panel_authenticated();
+$loginError = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
+    ks_guard_request('panel_login', 10, 60, 120);
+    if (!ks_verify_csrf()) {
+        $loginError = 'Invalid or expired security token. Please refresh and try again.';
+    } else {
+        $password = (string) ($_POST['password'] ?? '');
+        if ($password !== '' && password_verify($password, get_admin_password_hash())) {
+            ks_set_panel_authenticated(true);
+            header('Location: ./');
+            exit;
+        }
+        $loginError = 'Incorrect password. Please try again.';
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'logout' && $isAuthenticated) {
+    if (ks_verify_csrf()) {
+        ks_set_panel_authenticated(false);
+    }
+    header('Location: ./');
+    exit;
+}
+
+if (!$isAuthenticated) {
+?>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiosign • Admin Login</title>
+    <link rel="icon" type="image/svg+xml" href="<?php echo get_kiosign_favicon_data_uri(); ?>">
+    <script src="../asset/js/tailwind.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-slate-100 text-slate-800 flex items-center justify-center p-4 antialiased selection:bg-blue-600 selection:text-white">
+    <div class="w-full max-w-sm bg-white border border-slate-200/90 rounded-2xl shadow-xl shadow-slate-200/60 p-7 space-y-6">
+        <div class="flex flex-col items-center text-center space-y-3">
+            <?php echo get_kiosign_logo_svg('w-12 h-12 rounded-2xl shadow-md shadow-blue-500/15'); ?>
+            <div>
+                <h1 class="text-lg font-extrabold text-slate-900 tracking-tight">Kiosign Admin Panel</h1>
+                <p class="text-xs text-slate-500 mt-1">Enter your password to manage digital signage.</p>
+            </div>
+        </div>
+
+        <?php if ($loginError !== ''): ?>
+            <div class="px-3.5 py-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+                <?php echo htmlspecialchars($loginError); ?>
+            </div>
+        <?php endif; ?>
+
+        <form method="POST" class="space-y-4">
+            <?php echo ks_csrf_field(); ?>
+            <input type="hidden" name="action" value="login">
+
+            <div>
+                <label for="loginPassword" class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Password</label>
+                <input type="password" id="loginPassword" name="password" required autofocus autocomplete="current-password"
+                    placeholder="Enter admin password"
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none text-sm text-slate-900 shadow-xs">
+            </div>
+
+            <button type="submit"
+                class="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white shadow-md shadow-blue-500/25 transition cursor-pointer">
+                Sign In
+            </button>
+        </form>
+
+        <div class="pt-3 border-t border-slate-100 text-center">
+            <a href="../" class="text-xs font-semibold text-slate-500 hover:text-slate-800 transition">
+                &larr; Back to Display Screen
+            </a>
+        </div>
+    </div>
+</body>
+
+</html>
+<?php
+    exit;
+}
+
 $message = '';
 $messageType = 'success';
 
@@ -226,6 +317,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 set_setting($k, $v);
             }
             $message = 'Settings saved successfully!';
+        } elseif ($action === 'change_password') {
+            $currentPassword = (string) ($_POST['current_password'] ?? '');
+            $newPassword = (string) ($_POST['new_password'] ?? '');
+            $confirmPassword = (string) ($_POST['confirm_password'] ?? '');
+
+            if (!password_verify($currentPassword, get_admin_password_hash())) {
+                $message = 'Current password is incorrect.';
+                $messageType = 'error';
+            } elseif (strlen($newPassword) < 6) {
+                $message = 'New password must be at least 6 characters.';
+                $messageType = 'error';
+            } elseif ($newPassword !== $confirmPassword) {
+                $message = 'New password and confirmation do not match.';
+                $messageType = 'error';
+            } else {
+                set_setting('admin_password_hash', password_hash($newPassword, PASSWORD_DEFAULT));
+                $message = 'Admin password updated successfully!';
+            }
         } elseif ($action === 'reset_db') {
             reset_to_seed();
             $message = 'System reset to factory defaults.';
@@ -358,12 +467,21 @@ if (!empty($_POST['_active_tab']) && in_array($_POST['_active_tab'], $validTabsL
             </nav>
         </div>
 
-        <div class="p-3.5 border-t border-slate-100 space-y-2.5 bg-slate-50/50">
+        <div class="p-3.5 border-t border-slate-100 space-y-2 bg-slate-50/50">
             <a href="../" target="_blank"
                 class="w-full flex items-center justify-center space-x-2 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-bold text-white shadow-sm transition">
                 <span>Open Display Screen</span>
                 <?php echo get_icon_svg('external', 'w-3.5 h-3.5 text-slate-300'); ?>
             </a>
+
+            <form method="POST">
+                <?php echo ks_csrf_field(); ?>
+                <input type="hidden" name="action" value="logout">
+                <button type="submit"
+                    class="w-full flex items-center justify-center space-x-2 px-3.5 py-2 rounded-xl bg-white hover:bg-rose-50 text-xs font-bold text-slate-600 hover:text-rose-700 border border-slate-200 hover:border-rose-200 transition cursor-pointer">
+                    <span>Sign Out</span>
+                </button>
+            </form>
 
             <div class="px-1.5 pt-1 border-t border-slate-200/60 text-[10px] text-slate-500 space-y-0.5">
                 <div class="flex justify-between items-center text-slate-600 font-semibold">
@@ -1043,6 +1161,40 @@ if (!empty($_POST['_active_tab']) && in_array($_POST['_active_tab'], $validTabsL
                         <span class="text-slate-500 font-medium">Total Content:</span>
                         <span class="font-bold text-slate-900"><?php echo count($slides); ?> items</span>
                     </div>
+                </div>
+
+                <div class="p-5 rounded-2xl bg-white border border-slate-200/90 space-y-4 shadow-xs">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900">Admin Password</h3>
+                        <p class="text-xs text-slate-500 mt-0.5">Change the password used to sign in to this panel.</p>
+                    </div>
+                    <form method="POST" class="space-y-3">
+                        <?php echo ks_csrf_field(); ?>
+                        <input type="hidden" name="_active_tab" class="active-tab-field" value="<?php echo htmlspecialchars($activeTab); ?>">
+                        <input type="hidden" name="action" value="change_password">
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Current Password</label>
+                                <input type="password" name="current_password" required autocomplete="current-password"
+                                    class="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none text-xs text-slate-900">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">New Password</label>
+                                <input type="password" name="new_password" required minlength="6" autocomplete="new-password"
+                                    class="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none text-xs text-slate-900">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Confirm Password</label>
+                                <input type="password" name="confirm_password" required minlength="6" autocomplete="new-password"
+                                    class="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none text-xs text-slate-900">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-bold text-white transition shadow-sm cursor-pointer">
+                            Update Password
+                        </button>
+                    </form>
                 </div>
 
                 <div class="p-5 rounded-2xl bg-rose-50/70 border border-rose-200/80 space-y-3 shadow-xs">

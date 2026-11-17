@@ -72,6 +72,25 @@ function ks_verify_csrf(): bool
     return is_string($submitted) && $submitted !== '' && hash_equals($expected, $submitted);
 }
 
+function ks_is_panel_authenticated(): bool
+{
+    ks_init_session();
+    return !empty($_SESSION['_ks_panel_auth']) && $_SESSION['_ks_panel_auth'] === true;
+}
+
+function ks_set_panel_authenticated(bool $authenticated): void
+{
+    ks_init_session();
+    if (php_sapi_name() !== 'cli' && session_status() === PHP_SESSION_ACTIVE) {
+        session_regenerate_id(true);
+    }
+    if ($authenticated) {
+        $_SESSION['_ks_panel_auth'] = true;
+    } else {
+        unset($_SESSION['_ks_panel_auth']);
+    }
+}
+
 function ks_api_token(?int $bucket = null): string
 {
     $b = $bucket ?? (int) floor(time() / 3600);
