@@ -1,0 +1,42 @@
+Kiosign Free & Anti-Resale License (Share-Alike)
+Copyright (c) 2026 Gautavaris DigiSoft HUB
+
+Permission is hereby granted, free of charge, to any person or organization
+obtaining a copy of this software and associated documentation files (the
+"Software"), to use, copy, modify, and distribute the Software subject to the
+following conditions:
+
+1. FREE USE FOR ALL
+   Anyone may install, run, and use this Software free of charge for personal,
+   educational, community, institutional, or internal organizational display
+   purposes.
+
+2. ATTRIBUTION & SHARE-ALIKE
+   You may copy, modify, and redistribute the Software (in original or modified
+   form) provided that:
+   a) The original copyright notice ("Copyright (c) 2026 Gautavaris DigiSoft HUB")
+      and this full License text are preserved in all copies or substantial
+      portions of the Software.
+   b) Any modified or derivative version of the Software must remain free of
+      charge and be distributed under this exact same License.
+   c) You must not claim authorship of the original framework or remove credit
+      to Gautavaris DigiSoft HUB.
+
+3. STRICTLY NO SALE OR RESALE (ANTI-COMMERCIAL REDISTRIBUTION)
+   You are STRICTLY PROHIBITED from selling, reselling, renting, leasing,
+   licensing for a fee, or otherwise monetizing or commercially distributing
+   this Software, its core framework, or any modified/derivative version of it
+   — whether standalone, rebranded, or bundled as a paid product — either before
+   or after modification.
+
+4. THIRD-PARTY COMPONENTS
+   Third-party libraries included in this repository (such as Tailwind CSS)
+   remain governed by their own respective licenses (e.g., MIT License).
+
+5. DISCLAIMER OF WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+   LIABILITY ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
+   OR OTHER DEALINGS IN THE SOFTWARE.
