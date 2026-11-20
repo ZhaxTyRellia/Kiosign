@@ -189,53 +189,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $prefix = 'img_';
             }
 
-            if (!empty($_FILES['media_file']['name']) && $_FILES['media_file']['error'] === UPLOAD_ERR_OK) {
-                $ext = strtolower(pathinfo($_FILES['media_file']['name'], PATHINFO_EXTENSION));
-                if (in_array($ext, $allowed)) {
-                    $destDir = __DIR__ . '/../asset/' . $subDir;
-                    if (!is_dir($destDir)) mkdir($destDir, 0755, true);
+            if (!empty($_FILES['media_file']['name'])) {
+                $uploadErr = $_FILES['media_file']['error'];
+                if ($uploadErr === UPLOAD_ERR_OK) {
+                    $ext = strtolower(pathinfo($_FILES['media_file']['name'], PATHINFO_EXTENSION));
+                    if (in_array($ext, $allowed)) {
+                        $destDir = __DIR__ . '/../asset/' . $subDir;
+                        if (!is_dir($destDir)) @mkdir($destDir, 0777, true);
 
-                    $existingFiles = is_dir($destDir) ? scandir($destDir) : [];
-                    $maxSeq = 0;
-                    foreach ($existingFiles as $f) {
-                        if (preg_match('/^' . preg_quote($prefix, '/') . '(\d+)/', $f, $m)) {
-                            $seq = (int) $m[1];
-                            if ($seq > $maxSeq) {
-                                $maxSeq = $seq;
+                        $existingFiles = is_dir($destDir) ? scandir($destDir) : [];
+                        $maxSeq = 0;
+                        foreach ($existingFiles as $f) {
+                            if (preg_match('/^' . preg_quote($prefix, '/') . '(\d+)/', $f, $m)) {
+                                $seq = (int) $m[1];
+                                if ($seq > $maxSeq) {
+                                    $maxSeq = $seq;
+                                }
                             }
                         }
-                    }
 
-                    $dbSeq = (int) get_setting('seq_' . $subDir, 0);
-                    $nextSeq = max($dbSeq + 1, $maxSeq + 1);
-                    set_setting('seq_' . $subDir, (string) $nextSeq);
+                        $dbSeq = (int) get_setting('seq_' . $subDir, 0);
+                        $nextSeq = max($dbSeq + 1, $maxSeq + 1);
+                        set_setting('seq_' . $subDir, (string) $nextSeq);
 
-                    $cleanName = sprintf('%s%03d_%s.%s', $prefix, $nextSeq, date('Ymd_His'), $ext);
-                    $destPath = $destDir . DIRECTORY_SEPARATOR . $cleanName;
-                    if (file_exists($destPath)) {
-                        $cleanName = sprintf('%s%03d_%s_%s.%s', $prefix, $nextSeq, date('Ymd_His'), substr(md5(uniqid()), 0, 4), $ext);
+                        $cleanName = sprintf('%s%03d_%s.%s', $prefix, $nextSeq, date('Ymd_His'), $ext);
                         $destPath = $destDir . DIRECTORY_SEPARATOR . $cleanName;
-                    }
+                        if (file_exists($destPath)) {
+                            $cleanName = sprintf('%s%03d_%s_%s.%s', $prefix, $nextSeq, date('Ymd_His'), substr(md5(uniqid()), 0, 4), $ext);
+                            $destPath = $destDir . DIRECTORY_SEPARATOR . $cleanName;
+                        }
 
-                    if (move_uploaded_file($_FILES['media_file']['tmp_name'], $destPath)) {
-                        $message = 'File uploaded successfully!';
-                        if ($mediaType === 'audio' && isset($_POST['auto_add_playlist'])) {
-                            $playlist = get_setting('bgm_playlist', '');
-                            $lines = preg_split('/[\r\n]+/', trim($playlist));
-                            $newPath = 'asset/audio/' . $cleanName;
-                            if (!in_array($newPath, $lines)) {
-                                $lines[] = $newPath;
-                                set_setting('bgm_playlist', trim(implode("\n", array_filter($lines))));
+                        if (move_uploaded_file($_FILES['media_file']['tmp_name'], $destPath)) {
+                            $message = 'File uploaded successfully!';
+                            if ($mediaType === 'audio' && isset($_POST['auto_add_playlist'])) {
+                                $playlist = get_setting('bgm_playlist', '');
+                                $lines = preg_split('/[\r\n]+/', trim($playlist));
+                                $newPath = 'asset/audio/' . $cleanName;
+                                if (!in_array($newPath, $lines)) {
+                                    $lines[] = $newPath;
+                                    set_setting('bgm_playlist', trim(implode("\n", array_filter($lines))));
+                                }
                             }
+                        } else {
+                            $message = 'Failed to save uploaded file to destination directory.';
+                            $messageType = 'error';
                         }
                     } else {
-                        $message = 'Failed to save uploaded file.';
+                        $message = 'Unsupported file format (.' . htmlspecialchars($ext) . ').';
                         $messageType = 'error';
                     }
                 } else {
-                    $message = 'Unsupported file format.';
+                    $errMessages = [
+                        UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize limit in php.ini.',
+                        UPLOAD_ERR_FORM_SIZE => 'File exceeds MAX_FILE_SIZE limit in form.',
+                        UPLOAD_ERR_PARTIAL => 'File was only partially uploaded.',
+                        UPLOAD_ERR_NO_FILE => 'No file was selected for upload.',
+                        UPLOAD_ERR_NO_TMP_DIR => 'Missing a temporary upload folder on server.',
+                        UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk.',
+                        UPLOAD_ERR_EXTENSION => 'PHP extension stopped the file upload.'
+                    ];
+                    $message = $errMessages[$uploadErr] ?? ('Upload failed with error code: ' . $uploadErr);
                     $messageType = 'error';
                 }
+            } else {
+                $message = 'Please select a file to upload.';
+                $messageType = 'error';
             }
         } elseif ($action === 'unlink_media') {
             $mediaType = $_POST['media_type'] ?? 'image';
